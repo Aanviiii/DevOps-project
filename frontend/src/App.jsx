@@ -12,7 +12,7 @@ const ROUTES = [
     path: "catalogue",
     label: "Catalogue",
     icon: "📚",
-    subtitle: "Every title in the collection and how many copies are on the shelf",
+    subtitle: "Every title in the collection, with live copy availability and holds",
     Page: Catalogue,
   },
   {
