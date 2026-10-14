@@ -78,3 +78,10 @@ def test_stats_summarise_the_collection(client, clock, make_book, make_member, l
     assert stats["outstanding_fines"] == 10  # 2 loans x 1 day x 5 rupees
     assert stats["popular_genres"] == [{"genre": "Fiction", "loans": 2}]
     assert stats["checkouts_by_day"][-1]["day"] == "2026-10-16"
+
+
+def test_each_route_is_documented_under_one_tag(client):
+    operations = [
+        op for path in client.get("/openapi.json").json()["paths"].values() for op in path.values()
+    ]
+    assert all(len(op["tags"]) == 1 for op in operations)

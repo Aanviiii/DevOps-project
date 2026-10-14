@@ -10,23 +10,23 @@ from ..core.database import get_db
 from ..schemas import LibraryStats
 from ..services.stats import library_stats
 
-router = APIRouter(tags=["system"])
+router = APIRouter()
 
 
-@router.get("/")
+@router.get("/", tags=["system"])
 def root():
     settings = get_settings()
     return {"service": settings.app_name, "version": settings.app_version, "docs": "/docs"}
 
 
-@router.get("/health")
+@router.get("/health", tags=["system"])
 def health():
     """Liveness: the process is up and serving. Deliberately ignores the database, so a
     database outage does not make Kubernetes restart every healthy backend pod."""
     return {"status": "UP"}
 
 
-@router.get("/ready")
+@router.get("/ready", tags=["system"])
 def ready(response: Response, db: Session = Depends(get_db)):
     """Readiness: this pod can do useful work, which means reaching the database."""
     try:
