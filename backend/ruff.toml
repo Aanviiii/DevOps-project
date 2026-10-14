@@ -1,0 +1,17 @@
+line-length = 100
+target-version = "py313"
+
+[lint]
+# E/F/W: pyflakes + pycodestyle, I: import order, B: bugbear, UP: modern syntax,
+# S: bandit security rules, SIM: simplifications, N: naming.
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "N"]
+# B008: FastAPI's Depends()/Query() in defaults is the framework's idiom.
+ignore = ["B008"]
+
+[lint.per-file-ignores]
+# Tests use bare asserts and throwaway credentials by design.
+"tests/**" = ["S101", "S105", "S106"]
+"alembic/versions/**" = ["E501"]
+
+[lint.isort]
+known-first-party = ["app"]
