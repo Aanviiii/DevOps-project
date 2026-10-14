@@ -1,0 +1,113 @@
+# Scenario 3: the backend is Running but never Ready.
+# Symptom: pods show 0/1 READY with no restarts, the Service has no ready endpoints,
+# and events say "Readiness probe failed ... 503". The process is alive (liveness
+# passes) but /ready cannot reach the database: the password in the Secret is wrong.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lab-db
+  namespace: shelfwise-lab
+type: Opaque
+stringData:
+  postgres-password: correct-horse-battery
+  # BUG: the backend's URL carries a different password than the database's.
+  database-url: postgresql+psycopg://shelfwise:wrong-password@lab-postgres:5432/shelfwise
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-postgres
+  namespace: shelfwise-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: lab-postgres }
+  template:
+    metadata:
+      labels: { app: lab-postgres }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          env:
+            - { name: POSTGRES_DB, value: shelfwise }
+            - { name: POSTGRES_USER, value: shelfwise }
+            - name: POSTGRES_PASSWORD
+              valueFrom: { secretKeyRef: { name: lab-db, key: postgres-password } }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "shelfwise"] }
+          resources:
+            requests: { cpu: 20m, memory: 64Mi }
+            limits: { cpu: 200m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: run, mountPath: /var/run/postgresql }
+      volumes:
+        - { name: data, emptyDir: {} }
+        - { name: run, emptyDir: {} }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab-postgres
+  namespace: shelfwise-lab
+spec:
+  selector: { app: lab-postgres }
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-backend
+  namespace: shelfwise-lab
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: lab-backend }
+  template:
+    metadata:
+      labels: { app: lab-backend }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: backend
+          image: ghcr.io/aanviiii/shelfwise-backend:sha-086a03b
+          env:
+            - name: SHELFWISE_DATABASE_URL
+              valueFrom: { secretKeyRef: { name: lab-db, key: database-url } }
+            # Skip migrations so the process starts even though the database rejects
+            # it, which is exactly the "alive but not ready" state this lab is about.
+            - { name: SHELFWISE_SKIP_MIGRATIONS, value: "1" }
+          ports:
+            - { name: http, containerPort: 8000 }
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 4
+          resources:
+            requests: { cpu: 20m, memory: 96Mi }
+            limits: { cpu: 300m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]

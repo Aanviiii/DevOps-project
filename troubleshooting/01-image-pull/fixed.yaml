@@ -1,0 +1,42 @@
+# Fix for scenario 1: use a tag CI actually pushed (see the Actions run summary, or
+# `git log` for the commit and add the sha- prefix). Applying this rolls the pods.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue-api
+  namespace: shelfwise-lab
+  labels:
+    app: catalogue-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalogue-api
+  template:
+    metadata:
+      labels:
+        app: catalogue-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          # FIX: a real build pushed by the pipeline.
+          image: ghcr.io/aanviiii/shelfwise-backend:sha-086a03b
+          env:
+            - name: SHELFWISE_DATABASE_URL
+              value: sqlite:////tmp/lab.db
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet: { path: /ready, port: 8000 }
+          resources:
+            requests: { cpu: 20m, memory: 96Mi }
+            limits: { cpu: 200m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]

@@ -1,0 +1,10 @@
+# A separate namespace for the troubleshooting lab. Breaking things inside "shelfwise"
+# would be undone within a minute by Argo CD's self-heal, which is great for
+# production but useless for practice. Same restricted Pod Security profile.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shelfwise-lab
+  labels:
+    app.kubernetes.io/part-of: shelfwise-lab
+    pod-security.kubernetes.io/enforce: restricted

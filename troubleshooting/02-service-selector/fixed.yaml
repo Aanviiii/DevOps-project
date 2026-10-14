@@ -1,0 +1,14 @@
+# Fix for scenario 2: make the Service select the pods' real label. Endpoints appear
+# immediately; no pod restart is needed because only the Service changed.
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-web
+  namespace: shelfwise-lab
+spec:
+  selector:
+    app: library-web # FIX: matches spec.template.metadata.labels of the Deployment
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

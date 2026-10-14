@@ -1,0 +1,41 @@
+# Scenario 1: a release points at an image tag that was never pushed.
+# Symptom: pods stuck in ErrImagePull / ImagePullBackOff, the Deployment never becomes
+# available. A typo'd tag, or deploying before CI finished pushing, both look like this.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue-api
+  namespace: shelfwise-lab
+  labels:
+    app: catalogue-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalogue-api
+  template:
+    metadata:
+      labels:
+        app: catalogue-api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          # BUG: there is no "sha-0000000" build in GHCR.
+          image: ghcr.io/aanviiii/shelfwise-backend:sha-0000000
+          env:
+            - name: SHELFWISE_DATABASE_URL
+              value: sqlite:////tmp/lab.db
+          ports:
+            - containerPort: 8000
+          resources:
+            requests: { cpu: 20m, memory: 96Mi }
+            limits: { cpu: 200m, memory: 256Mi }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]

@@ -1,0 +1,17 @@
+# Fix for scenario 3: correct the credentials in the Secret, then restart the backend
+# (environment variables from a Secret are read only when a container starts):
+#
+#   kubectl apply -f troubleshooting/03-readiness/fixed.yaml
+#   kubectl rollout restart deployment/lab-backend -n shelfwise-lab
+#
+# (The real chart avoids that manual restart: a checksum of the Secret is stamped on
+# the pod template, so changing it rolls the pods automatically.)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: lab-db
+  namespace: shelfwise-lab
+type: Opaque
+stringData:
+  postgres-password: correct-horse-battery
+  database-url: postgresql+psycopg://shelfwise:correct-horse-battery@lab-postgres:5432/shelfwise
