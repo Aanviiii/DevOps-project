@@ -88,3 +88,8 @@ monitoring:
   enabled: false
   scrapeInterval: 15s
   overdueAlertThreshold: 10
+
+# Simulated patrons generating steady API traffic (activity/generator.py).
+activity:
+  enabled: false
+  actionsPerMinute: 40

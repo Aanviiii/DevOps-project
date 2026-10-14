@@ -23,3 +23,6 @@ networkPolicy:
 
 monitoring:
   enabled: true
+
+activity:
+  enabled: true
