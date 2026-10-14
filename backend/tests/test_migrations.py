@@ -16,29 +16,35 @@ BACKEND = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
-def migrated_url(tmp_path):
+def migrated(tmp_path):
     url = f"sqlite:///{tmp_path / 'migrations.db'}"
     config = Config(str(BACKEND / "alembic.ini"))
     config.set_main_option("script_location", str(BACKEND / "alembic"))
     config.set_main_option("sqlalchemy.url", url)
     command.upgrade(config, "head")
-    yield url, config
+    engine = create_engine(url)
+    yield engine, config
+    engine.dispose()
 
 
-def test_upgrade_creates_every_table(migrated_url):
-    url, _ = migrated_url
-    tables = set(inspect(create_engine(url)).get_table_names())
-    assert {"books", "members", "loans", "holds", "alembic_version"} <= tables
+def table_names(engine) -> set[str]:
+    with engine.connect() as connection:
+        return set(inspect(connection).get_table_names())
 
 
-def test_migrations_match_the_models(migrated_url):
-    url, _ = migrated_url
-    with create_engine(url).connect() as connection:
+def test_upgrade_creates_every_table(migrated):
+    engine, _ = migrated
+    assert {"books", "members", "loans", "holds", "alembic_version"} <= table_names(engine)
+
+
+def test_migrations_match_the_models(migrated):
+    engine, _ = migrated
+    with engine.connect() as connection:
         diff = compare_metadata(MigrationContext.configure(connection), Base.metadata)
     assert diff == []
 
 
-def test_downgrade_removes_everything(migrated_url):
-    url, config = migrated_url
+def test_downgrade_removes_everything(migrated):
+    engine, config = migrated
     command.downgrade(config, "base")
-    assert set(inspect(create_engine(url)).get_table_names()) == {"alembic_version"}
+    assert table_names(engine) == {"alembic_version"}
