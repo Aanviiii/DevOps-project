@@ -10,6 +10,7 @@ The application is the reason for the platform around it. Every commit is linted
 |---|---|
 | **Rubric evidence** | [docs/SUBMISSION.md](docs/SUBMISSION.md): every grading criterion mapped to its file and screenshot |
 | **Architecture** | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): diagrams and the design trade-offs |
+| **Presentation** | [docs/Shelfwise-presentation.pdf](docs/Shelfwise-presentation.pdf) (9 slides, also as [PowerPoint](docs/Shelfwise-presentation.pptx) with speaker notes) |
 | **Live demo script** | [docs/DEMO.md](docs/DEMO.md) |
 | **Troubleshooting lab** | [troubleshooting/RUNBOOK.md](troubleshooting/RUNBOOK.md) |
 
