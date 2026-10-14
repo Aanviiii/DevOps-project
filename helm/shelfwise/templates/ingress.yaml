@@ -1,0 +1,41 @@
+{{- if .Values.ingress.enabled }}
+# One host, two routes: /api goes straight to the FastAPI Service and everything else
+# to the React app. (Inside the frontend pods nginx can also proxy /api, which keeps
+# the app working without an Ingress, for example over a port-forward.)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "shelfwise.fullname" . }}
+  labels:
+    {{- include "shelfwise.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    - {{- with .Values.ingress.host }}
+      host: {{ . | quote }}
+      {{- end }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "shelfwise.backendService" . }}
+                port:
+                  name: http
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "shelfwise.frontendService" . }}
+                port:
+                  name: http
+{{- end }}

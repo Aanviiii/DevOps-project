@@ -84,6 +84,25 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
+  helm:
+    name: Helm · lint and validate
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+      - name: Install kubeconform
+        run: |
+          curl -sSL https://github.com/yannh/kubeconform/releases/download/v0.7.0/kubeconform-linux-amd64.tar.gz             | sudo tar -xz -C /usr/local/bin kubeconform
+      - name: Lint the chart with each environment's values
+        run: |
+          helm lint helm/shelfwise --strict -f helm/shelfwise/values-local.yaml
+          helm lint helm/shelfwise --strict -f helm/shelfwise/values-eks.yaml --set image.tag=sha-ci
+      - name: Render and validate against the Kubernetes 1.35 API schemas
+        run: |
+          for env in local eks; do
+            helm template shelfwise helm/shelfwise -n shelfwise               -f helm/shelfwise/values-$env.yaml --set image.tag=sha-ci               --api-versions monitoring.coreos.com/v1
+          done | kubeconform -strict -summary -kubernetes-version 1.35.0             -schema-location default             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
   terraform:
     name: Terraform · fmt and validate
     runs-on: ubuntu-24.04

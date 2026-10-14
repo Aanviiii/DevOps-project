@@ -1,0 +1,22 @@
+# Local minikube environment, managed by Argo CD (k8s/argocd/application.yaml).
+#
+# image.tag is not set here: Argo CD Image Updater sets it to the newest sha-xxxxxxx
+# image that CI pushed to GHCR, so a merged commit rolls out without a commit back to
+# this repository.
+
+image:
+  tag: sha-latest-build # placeholder until Image Updater sets the real tag
+
+backend:
+  seedDemoData: true
+
+postgres:
+  # Throwaway local database. Real environments use postgres.existingSecret.
+  password: shelfwise-local-only
+
+ingress:
+  className: nginx
+  host: shelfwise.local
+
+networkPolicy:
+  enabled: true

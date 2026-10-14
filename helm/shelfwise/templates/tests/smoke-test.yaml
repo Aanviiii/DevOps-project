@@ -1,0 +1,40 @@
+# `helm test shelfwise -n shelfwise` runs this pod. It checks the deployed stack from
+# inside the cluster, the way the Ingress sees it:
+#   frontend serves the app, the backend is ready (so Postgres is reachable), and the
+#   API answers through the frontend's /api proxy.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "shelfwise.fullname" . }}-smoke-test
+  labels:
+    {{- include "shelfwise.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: smoke-test
+      image: busybox:1.37
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop: [ALL]
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "frontend serves the app"
+          wget -q -O - http://{{ include "shelfwise.frontendService" . }}/ | grep -q '<div id="root">'
+          echo "backend is ready (database reachable)"
+          wget -q -O - http://{{ include "shelfwise.backendService" . }}:{{ .Values.backend.port }}/ready | grep -q READY
+          echo "API answers through the frontend proxy"
+          wget -q -O - http://{{ include "shelfwise.frontendService" . }}/api/stats | grep -q '"titles"'
+          echo "all checks passed"

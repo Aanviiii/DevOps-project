@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "shelfwise.backendService" . }}
+  labels:
+    {{- include "shelfwise.baseLabels" . | nindent 4 }}
+    {{- include "shelfwise.selector" (list . "backend") | nindent 4 }}
+spec:
+  {{- if not .Values.backend.autoscaling.enabled }}
+  replicas: {{ .Values.backend.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0 # never drop below current capacity during a rollout
+  selector:
+    matchLabels:
+      {{- include "shelfwise.selector" (list . "backend") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "shelfwise.baseLabels" . | nindent 8 }}
+        {{- include "shelfwise.selector" (list . "backend") | nindent 8 }}
+      annotations:
+        # Roll the pods when the database credentials change.
+        checksum/db-secret: {{ include (print $.Template.BasePath "/secret-db.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        runAsUser: 10001
+        runAsGroup: 10001
+      # Spread replicas across nodes so one node failure cannot take every backend out.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "shelfwise.selector" (list . "backend") | nindent 14 }}
+      containers:
+        - name: backend
+          image: {{ include "shelfwise.image" (list . "backend") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.backend.port }}
+          env:
+            - name: SHELFWISE_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shelfwise.dbSecret" . }}
+                  key: database-url
+            - name: SHELFWISE_LOG_LEVEL
+              value: {{ .Values.backend.logLevel | quote }}
+            - name: SHELFWISE_SEED_DEMO_DATA
+              value: {{ ternary "1" "0" .Values.backend.seedDemoData | quote }}
+          # Startup covers migrations (and a first demo seed). After that, liveness
+          # restarts a hung process, and readiness takes a pod out of the Service
+          # while it cannot reach the database.
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 3
+            failureThreshold: 40
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet: { path: /ready, port: http }
+            periodSeconds: 5
+            timeoutSeconds: 4
+          resources:
+            {{- toYaml .Values.backend.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "shelfwise.backendService" . }}
+  labels:
+    {{- include "shelfwise.baseLabels" . | nindent 4 }}
+    {{- include "shelfwise.selector" (list . "backend") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "shelfwise.selector" (list . "backend") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.backend.port }}
+      targetPort: http

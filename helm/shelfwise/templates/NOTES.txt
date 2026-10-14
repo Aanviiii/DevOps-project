@@ -1,0 +1,15 @@
+Shelfwise {{ .Values.image.tag }} is deployed to namespace {{ .Release.Namespace }}.
+
+  kubectl get pods,svc,hpa,ingress -n {{ .Release.Namespace }}
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+{{- if .Values.ingress.enabled }}
+
+Open http://{{ .Values.ingress.host }}/
+  (the API is under http://{{ .Values.ingress.host }}/api/... and docs need a port-forward:
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "shelfwise.backendService" . }} 8000:{{ .Values.backend.port }})
+{{- else }}
+
+No Ingress: reach the app with
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "shelfwise.frontendService" . }} 8080:80
+{{- end }}

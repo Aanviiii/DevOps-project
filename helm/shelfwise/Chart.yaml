@@ -1,0 +1,12 @@
+apiVersion: v2
+name: shelfwise
+description: Shelfwise library circulation platform (React frontend, FastAPI backend, PostgreSQL)
+type: application
+version: 1.0.0
+# The application version is the image tag, set per environment (sha-<commit>).
+appVersion: "1.0.0"
+kubeVersion: ">=1.29.0-0"
+keywords: [library, fastapi, react, postgres]
+maintainers:
+  - name: Aanvi
+home: https://github.com/Aanviiii/DevOps-project

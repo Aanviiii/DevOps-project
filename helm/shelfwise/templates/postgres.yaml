@@ -1,0 +1,98 @@
+# PostgreSQL as a single-replica StatefulSet with its own PersistentVolumeClaim, so the
+# data survives pod restarts and rescheduling. In production a managed database such
+# as Amazon RDS would replace this; docs/ARCHITECTURE.md discusses the trade-off.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "shelfwise.postgresHost" . }}
+  labels:
+    {{- include "shelfwise.baseLabels" . | nindent 4 }}
+    {{- include "shelfwise.selector" (list . "postgres") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "shelfwise.selector" (list . "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "shelfwise.postgresHost" . }}
+  labels:
+    {{- include "shelfwise.baseLabels" . | nindent 4 }}
+    {{- include "shelfwise.selector" (list . "postgres") | nindent 4 }}
+spec:
+  serviceName: {{ include "shelfwise.postgresHost" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "shelfwise.selector" (list . "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "shelfwise.baseLabels" . | nindent 8 }}
+        {{- include "shelfwise.selector" (list . "postgres") | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 70 # the postgres user in the Alpine image
+        runAsGroup: 70
+        fsGroup: 70
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.username | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "shelfwise.dbSecret" . }}
+                  key: postgres-password
+            # A subdirectory, because some volumes have lost+found at their root.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}, "-d", {{ .Values.postgres.database | quote }}]
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", {{ .Values.postgres.username | quote }}]
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: run
+              mountPath: /var/run/postgresql
+      volumes:
+        - name: run
+          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.postgres.storage.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage.size }}

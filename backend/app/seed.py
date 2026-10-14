@@ -10,11 +10,11 @@ seed makes the result the same every time. Does nothing if books already exist.
 import random
 from datetime import UTC, datetime, time, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from .circulation import CirculationError
 from .core.clock import today
-from .core.database import SessionLocal
+from .core.database import SessionLocal, engine
 from .models import Book, Hold, HoldStatus, Loan, Member, MemberTier
 from .routers.members import card_number_for
 from .services import circulation
@@ -186,5 +186,21 @@ def seed() -> str:
         return f"Seeded {len(BOOKS)} books, {len(members)} members and {loans} loans."
 
 
+SEED_LOCK_ID = 7_441_002
+
+
+def seed_once() -> str:
+    """Seed under a Postgres advisory lock, so replicas starting together take turns and
+    only the first one seeds; the rest then find books and skip."""
+    if engine.dialect.name != "postgresql":
+        return seed()
+    with engine.connect() as lock:
+        lock.execute(text("SELECT pg_advisory_lock(:id)"), {"id": SEED_LOCK_ID})
+        try:
+            return seed()
+        finally:
+            lock.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": SEED_LOCK_ID})
+
+
 if __name__ == "__main__":
-    print(seed())
+    print(seed_once())

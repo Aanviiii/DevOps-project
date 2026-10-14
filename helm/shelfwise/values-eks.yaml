@@ -1,0 +1,20 @@
+# AWS EKS environment, deployed by scripts/eks-up.ps1 (helm upgrade --install).
+#
+# The image tag and the database secret come from the command line, never from this
+# file:  --set image.tag=sha-xxxxxxx  and a pre-created Secret named below.
+
+postgres:
+  existingSecret: shelfwise-db
+  storage:
+    storageClassName: gp3
+
+storageClass:
+  create: true
+
+ingress:
+  className: nginx
+  # No host: the app answers on the load balancer's own DNS name.
+  host: ""
+
+backend:
+  seedDemoData: true

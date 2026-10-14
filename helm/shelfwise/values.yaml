@@ -1,0 +1,83 @@
+# Default values. Environment files (values-local.yaml, values-eks.yaml) override them.
+
+# Shared by every Shelfwise image; set per environment to the commit being deployed.
+image:
+  registry: ghcr.io/aanviiii
+  tag: ""          # required: sha-<7 chars>, the tag CI pushes
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+backend:
+  replicas: 2       # used only when autoscaling is off; otherwise HPA minReplicas applies
+  port: 8000
+  logLevel: info
+  seedDemoData: false
+  resources:
+    requests: { cpu: 100m, memory: 160Mi }
+    limits: { cpu: 500m, memory: 384Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 60
+  podDisruptionBudget:
+    minAvailable: 1
+
+frontend:
+  replicas: 2
+  port: 8080
+  resources:
+    requests: { cpu: 25m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 96Mi }
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 1
+
+postgres:
+  image: postgres:17-alpine
+  database: shelfwise
+  username: shelfwise
+  # Leave empty and set existingSecret for real environments. A plain value here is
+  # only for throwaway local clusters.
+  password: ""
+  existingSecret: ""   # a Secret with keys postgres-password and database-url
+  storage:
+    size: 1Gi
+    storageClassName: ""   # empty = the cluster's default StorageClass
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: 500m, memory: 512Mi }
+
+# Creates an EBS gp3 StorageClass (EKS ships without a default one).
+storageClass:
+  create: false
+  name: gp3
+  provisioner: ebs.csi.aws.com
+
+ingress:
+  enabled: true
+  className: nginx
+  host: shelfwise.local
+  annotations: {}
+  tls: []
+
+# Restrict traffic between pods (only enforced when the cluster's CNI supports it).
+networkPolicy:
+  enabled: false
+  ingressControllerNamespace: ingress-nginx
+  monitoringNamespace: monitoring
+
+podSecurityContext:
+  runAsNonRoot: true
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: [ALL]
