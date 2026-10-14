@@ -1,0 +1,95 @@
+{{- if .Values.monitoring.enabled }}
+# Observability for the Prometheus Operator (kube-prometheus-stack):
+#   ServiceMonitor  - scrape the backend's /metrics every 15 s
+#   PrometheusRule  - alerts on availability, errors, latency, scaling and overdue books
+#   ConfigMap       - the "Shelfwise · Library service" Grafana dashboard, picked up by
+#                     Grafana's dashboard sidecar through the grafana_dashboard label
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "shelfwise.backendService" . }}
+  labels:
+    {{- include "shelfwise.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "shelfwise.selector" (list . "backend") | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.scrapeInterval }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "shelfwise.fullname" . }}-alerts
+  labels:
+    {{- include "shelfwise.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: shelfwise.availability
+      rules:
+        - alert: ShelfwiseBackendDown
+          expr: sum(up{job="{{ include "shelfwise.backendService" . }}", namespace="{{ .Release.Namespace }}"}) == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: No Shelfwise backend pod is answering /metrics
+            description: Every backend target has been down for a minute. The library desk cannot lend or return books.
+        - alert: ShelfwiseHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="{{ include "shelfwise.backendService" . }}", status=~"5.."}[5m]))
+              / clamp_min(sum(rate(http_requests_total{job="{{ include "shelfwise.backendService" . }}"}[5m])), 1e-9)
+              > 0.05
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: More than 5% of API requests are failing
+            description: "{{`{{ $value | humanizePercentage }}`}} of requests returned a 5xx over the last 5 minutes."
+        - alert: ShelfwiseSlowRequests
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (rate(http_request_duration_seconds_bucket{job="{{ include "shelfwise.backendService" . }}"}[5m]))
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: API p95 latency is above 500 ms
+            description: "95th percentile latency is {{`{{ $value | humanizeDuration }}`}}."
+    - name: shelfwise.capacity
+      rules:
+        - alert: ShelfwiseBackendAtMaxReplicas
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="{{ .Release.Namespace }}", horizontalpodautoscaler="{{ include "shelfwise.backendService" . }}"}
+              >= kube_horizontalpodautoscaler_spec_max_replicas{namespace="{{ .Release.Namespace }}", horizontalpodautoscaler="{{ include "shelfwise.backendService" . }}"}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: The backend has been at its replica ceiling for 10 minutes
+            description: The HPA cannot add more pods; raise maxReplicas or the node count.
+    - name: shelfwise.library
+      rules:
+        - alert: ShelfwiseOverdueBacklog
+          expr: max(shelfwise_overdue_loans{namespace="{{ .Release.Namespace }}"}) > {{ .Values.monitoring.overdueAlertThreshold }}
+          for: 15m
+          labels:
+            severity: info
+          annotations:
+            summary: Many loans are overdue
+            description: "{{`{{ $value }}`}} loans are past their due date; time to send reminders."
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "shelfwise.fullname" . }}-dashboard
+  labels:
+    {{- include "shelfwise.labels" . | nindent 4 }}
+    grafana_dashboard: "1"
+data:
+  shelfwise.json: |-
+    {{- .Files.Get "dashboards/shelfwise.json" | nindent 4 }}
+{{- end }}

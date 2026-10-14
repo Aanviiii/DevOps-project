@@ -81,3 +81,10 @@ containerSecurityContext:
   readOnlyRootFilesystem: true
   capabilities:
     drop: [ALL]
+
+# ServiceMonitor, alert rules and Grafana dashboard. Needs kube-prometheus-stack
+# (monitoring/kube-prometheus-stack.values.yaml) installed first.
+monitoring:
+  enabled: false
+  scrapeInterval: 15s
+  overdueAlertThreshold: 10
