@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { getBackendVersion } from "../api";
 
 // Set at image build time from the Git commit (see frontend/Dockerfile).
@@ -34,7 +34,7 @@ export default function Layout({ routes, current, children }) {
           <Logo />
           <span>
             Shelfwise
-            <small>Library desk</small>
+            <small>Central library desk</small>
           </span>
         </a>
         <nav>
@@ -54,7 +54,7 @@ export default function Layout({ routes, current, children }) {
         </nav>
         <footer className="sidebar-footer">
           <span>Frontend {FRONTEND_VERSION}</span>
-          <span>Backend {backendVersion ?? "…"}</span>
+          <span>Backend {backendVersion ?? "â€¦"}</span>
         </footer>
       </aside>
       <div className="scrim" onClick={() => setMenuOpen(false)} />
@@ -66,7 +66,7 @@ export default function Layout({ routes, current, children }) {
             onClick={() => setMenuOpen((open) => !open)}
             aria-label="Open navigation"
           >
-            ☰
+            â˜°
           </button>
           <div>
             <h1>{page.label}</h1>
