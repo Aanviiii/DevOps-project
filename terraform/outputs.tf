@@ -32,3 +32,12 @@ output "configure_kubectl" {
   description = "Run this to point kubectl at the new cluster."
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${aws_eks_cluster.main.name}"
 }
+
+output "node_group" {
+  description = "Managed node group name, capacity type and instance types."
+  value = {
+    name           = aws_eks_node_group.main.node_group_name
+    capacity_type  = aws_eks_node_group.main.capacity_type
+    instance_types = aws_eks_node_group.main.instance_types
+  }
+}
