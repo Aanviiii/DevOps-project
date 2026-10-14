@@ -46,9 +46,11 @@ grafana:
       enabled: true
       label: grafana_dashboard
       searchNamespace: ALL
+  # 384Mi was measured too small: Grafana was OOMKilled rendering the 11-panel
+  # Shelfwise dashboard in kiosk mode.
   resources:
-    requests: { cpu: 50m, memory: 160Mi }
-    limits: { memory: 384Mi }
+    requests: { cpu: 50m, memory: 256Mi }
+    limits: { memory: 640Mi }
 
 # Alerts are visible on Prometheus's Alerts page; no Alertmanager routing is needed
 # for the demo, so leave it out and save the memory.
