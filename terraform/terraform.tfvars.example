@@ -1,0 +1,17 @@
+# Copy to terraform.tfvars (git-ignored) and adjust. No credentials belong here:
+# Terraform reads them from `aws configure` or AWS_* environment variables.
+
+region       = "ap-south-1"
+cluster_name = "shelfwise"
+owner        = "aanvi"
+
+# Lock the Kubernetes API to your own public IP for the demo (find it at checkip.amazonaws.com)
+api_allowed_cidrs = ["203.0.113.10/32"]
+
+node_capacity_type  = "SPOT"
+node_instance_types = ["t3.medium", "t3a.medium"]
+node_desired_size   = 2
+
+# Email alert when monthly spend passes 50% and 100% of this amount
+budget_limit_usd   = 5
+budget_alert_email = "you@example.com"

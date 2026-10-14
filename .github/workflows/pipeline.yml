@@ -84,6 +84,23 @@ jobs:
           name: frontend-dist
           path: frontend/dist
 
+  terraform:
+    name: Terraform · fmt and validate
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v4
+      - name: Formatting
+        run: terraform fmt -check -recursive
+      # No backend and no AWS credentials: this checks the code and never touches AWS.
+      - name: Validate
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
   secrets:
     name: Secret scan · gitleaks
     runs-on: ubuntu-24.04
