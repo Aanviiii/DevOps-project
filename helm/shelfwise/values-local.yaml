@@ -1,11 +1,11 @@
 # Local minikube environment, managed by Argo CD (k8s/argocd/application.yaml).
 #
-# image.tag is not set here: Argo CD Image Updater sets it to the newest sha-xxxxxxx
-# image that CI pushed to GHCR, so a merged commit rolls out without a commit back to
-# this repository.
+# image.tag below is only the starting point. Argo CD Image Updater overrides it with
+# the newest sha-xxxxxxx image CI pushed to GHCR (as a parameter on the Application),
+# so a merged commit rolls out without any commit back to this repository.
 
 image:
-  tag: sha-latest-build # placeholder until Image Updater sets the real tag
+  tag: sha-914a82e # starting point; Image Updater moves it to each new build
 
 backend:
   seedDemoData: true

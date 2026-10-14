@@ -1,0 +1,14 @@
+# Argo CD Image Updater (chart argo/argocd-image-updater 1.3.2).
+config:
+  # GHCR packages for this project are public, so no pull credentials are needed.
+  registries:
+    - name: GitHub Container Registry
+      prefix: ghcr.io
+      api_url: https://ghcr.io
+      default: true
+  logLevel: info
+
+# How often to look for new tags.
+extraArgs:
+  - --interval
+  - 1m

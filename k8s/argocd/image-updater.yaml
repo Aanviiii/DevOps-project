@@ -1,0 +1,28 @@
+# Argo CD Image Updater: watches GHCR for new Shelfwise builds and points the
+# Application at the newest one.
+#
+# Only tags shaped like CI's commit tags (sha-1a2b3c4) are considered, and the newest
+# by build time wins. Both images are built from the same commit, so the backend's tag
+# is written to the chart's shared image.tag, which the frontend uses too.
+# write-back "argocd" stores the tag as a Helm parameter on the Application itself,
+# so no bot ever commits to the repository.
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: shelfwise
+  namespace: argocd
+spec:
+  writeBackConfig:
+    method: argocd
+  applicationRefs:
+    - namePattern: shelfwise
+      images:
+        - alias: shelfwise
+          imageName: ghcr.io/aanviiii/shelfwise-backend
+          commonUpdateSettings:
+            updateStrategy: newest-build
+            allowTags: "regexp:^sha-[0-9a-f]{7}$"
+          manifestTargets:
+            helm:
+              name: image.updaterImage # informational; the chart builds names from image.registry
+              tag: image.tag

@@ -1,0 +1,46 @@
+# Argo CD keeps the shelfwise namespace in sync with helm/shelfwise on main.
+#
+#   git push -> CI tests, scans and pushes sha-xxxxxxx images to GHCR
+#            -> Image Updater sees the new tag and sets image.tag on this Application
+#            -> Argo CD renders the chart and rolls the Deployments
+#
+# Any manual change in the cluster is reverted (selfHeal), and objects removed from
+# the chart are deleted (prune).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: shelfwise
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/Aanviiii/DevOps-project.git
+    targetRevision: main
+    path: helm/shelfwise
+    helm:
+      valueFiles:
+        - values-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: shelfwise
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false # k8s/namespace.yaml owns the namespace and its policies
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+  # Replica counts belong to the HorizontalPodAutoscalers, not to Git.
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

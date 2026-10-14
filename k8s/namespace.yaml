@@ -1,0 +1,12 @@
+# The application's namespace. Pod Security Admission enforces the "restricted"
+# profile: every pod must run as non-root, drop all capabilities, use the runtime's
+# seccomp profile and forbid privilege escalation, which the Helm chart does.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: shelfwise
+  labels:
+    app.kubernetes.io/part-of: shelfwise
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted

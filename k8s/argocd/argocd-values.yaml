@@ -1,0 +1,41 @@
+# Argo CD for the local minikube cluster (chart argo/argo-cd 10.10.3).
+# A slim install: no Dex SSO, no notifications, single replicas, small requests.
+
+configs:
+  params:
+    # TLS ends at the ingress controller; the UI is served over plain HTTP locally.
+    server.insecure: true
+  cm:
+    # Check Git for changes every 60 s instead of the default 3 minutes, so a demo
+    # commit shows up quickly.
+    timeout.reconciliation: 60s
+    # Hide the noise of HPA-managed replica counts and similar controller-owned fields.
+    resource.exclusions: |
+      - apiGroups: ["metrics.k8s.io"]
+        kinds: ["*"]
+        clusters: ["*"]
+
+dex:
+  enabled: false
+notifications:
+  enabled: false
+
+server:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.shelfwise.local
+  resources:
+    requests: { cpu: 50m, memory: 96Mi }
+
+controller:
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+
+repoServer:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+
+redis:
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
