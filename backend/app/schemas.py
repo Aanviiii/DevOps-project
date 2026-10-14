@@ -131,3 +131,29 @@ class MemberAccount(BaseModel):
 class ErrorOut(BaseModel):
     code: str
     detail: str
+
+
+# ---------------------------------------------------------------- insights
+
+
+class DailyCount(BaseModel):
+    day: date
+    count: int
+
+
+class GenreCount(BaseModel):
+    genre: str
+    loans: int
+
+
+class LibraryStats(BaseModel):
+    titles: int
+    copies: int
+    members_active: int
+    on_loan: int
+    overdue: int
+    outstanding_fines: int
+    holds_waiting: int
+    holds_ready: int
+    checkouts_by_day: list[DailyCount]
+    popular_genres: list[GenreCount]

@@ -20,6 +20,7 @@ from ..circulation import (
     renewed_due_date,
     shelf_copies,
 )
+from ..metrics import CHECKOUTS, HOLDS_PLACED, RENEWALS, RETURNS
 from ..models import Book, Hold, HoldStatus, Loan, Member
 from ..schemas import HoldOut, LoanOut
 from .catalogue import availability
@@ -144,6 +145,7 @@ def checkout(db: Session, *, book_id: int, member_id: int, today: date) -> Loan:
     if my_hold is not None:
         my_hold.status = HoldStatus.FULFILLED
     db.commit()
+    CHECKOUTS.labels(tier=member.tier.value).inc()
     return loan
 
 
@@ -155,6 +157,7 @@ def return_loan(db: Session, *, loan: Loan, today: date) -> Loan:
     db.flush()
     refresh_queue(db, book, today)
     db.commit()
+    RETURNS.labels(late=str(today > loan.due_on).lower()).inc()
     return loan
 
 
@@ -171,6 +174,7 @@ def renew(db: Session, *, loan: Loan, today: date) -> Loan:
     )
     loan.renewals += 1
     db.commit()
+    RENEWALS.inc()
     return loan
 
 
@@ -191,6 +195,7 @@ def place_hold(db: Session, *, book_id: int, member_id: int, today: date) -> Hol
     hold = Hold(book_id=book.id, member_id=member.id, status=HoldStatus.WAITING)
     db.add(hold)
     db.commit()
+    HOLDS_PLACED.inc()
     return hold
 
 

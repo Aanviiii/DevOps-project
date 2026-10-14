@@ -25,7 +25,15 @@ def _make_engine(url: str):
         # Tests use an in-memory database; StaticPool shares one connection across threads
         # so every request in a test sees the same data.
         return create_engine(url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    return create_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+    # A short connect timeout keeps /ready and /metrics answering quickly (with a failure)
+    # during a database outage instead of hanging until the probe gives up.
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=5,
+        connect_args={"connect_timeout": 3},
+    )
 
 
 engine = _make_engine(get_settings().database_url)
