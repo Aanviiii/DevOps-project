@@ -62,6 +62,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Version string (matches the short image tag, e.g. sha-1a2b3c4)
+        run: echo "APP_VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -74,17 +77,29 @@ jobs:
       - name: Production build
         run: npm run build
         env:
-          VITE_APP_VERSION: sha-${{ github.sha }}
+          VITE_APP_VERSION: ${{ env.APP_VERSION }}
 
       - uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend/dist
 
+  secrets:
+    name: Secret scan · gitleaks
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # every commit, not just the latest: a deleted secret is still leaked
+
+      - name: Scan the full Git history for credentials
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.30.1             git /repo --redact --verbose --exit-code 1
+
   # ------------------------------------------------------------------ build, scan, publish
   images:
     name: Image · ${{ matrix.component }}
-    needs: [backend, frontend]
+    needs: [backend, frontend, secrets]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -98,6 +113,9 @@ jobs:
       PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v7
+
+      - name: Version string (matches the short image tag, e.g. sha-1a2b3c4)
+        run: echo "APP_VERSION=sha-${GITHUB_SHA::7}" >> "$GITHUB_ENV"
 
       - name: Work out the image name (GHCR needs a lowercase owner)
         id: name
@@ -120,7 +138,7 @@ jobs:
           context: ${{ matrix.component }}
           load: true
           tags: scan/shelfwise-${{ matrix.component }}:${{ github.sha }}
-          build-args: APP_VERSION=sha-${{ github.sha }}
+          build-args: APP_VERSION=${{ env.APP_VERSION }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
 
@@ -170,7 +188,7 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: APP_VERSION=sha-${{ github.sha }}
+          build-args: APP_VERSION=${{ env.APP_VERSION }}
           cache-from: type=gha,scope=${{ matrix.component }}
           provenance: mode=max
           sbom: true
