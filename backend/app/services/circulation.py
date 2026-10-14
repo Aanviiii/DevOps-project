@@ -188,12 +188,19 @@ def renew(db: Session, *, loan: Loan, today: date) -> Loan:
     if loan.returned_on is not None:
         raise CirculationError("ALREADY_RETURNED", "A returned loan cannot be renewed.")
     member = loan.member
+    # Only WAITING holds count: a READY hold already has its own copy set aside.
+    waiting = db.scalar(
+        select(func.count())
+        .select_from(Hold)
+        .where(Hold.book_id == loan.book_id, Hold.status == HoldStatus.WAITING)
+    )
     loan.due_on = renewed_due_date(
         due_on=loan.due_on,
         renewals=loan.renewals,
         policy=policy_for(member.tier),
         today=today,
         outstanding_fines=outstanding_fines(db, member, today),
+        others_waiting=bool(waiting),
     )
     loan.renewals += 1
     db.commit()
