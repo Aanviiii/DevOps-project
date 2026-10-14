@@ -1,0 +1,72 @@
+# The whole Shelfwise stack on one machine:  docker compose up --build
+#
+#   http://localhost:3000        library desk (nginx serving React, proxying /api)
+#   http://localhost:8000/docs   API documentation (Swagger)
+#
+# Start order is enforced with healthchecks: Postgres must accept connections before
+# the backend starts (and migrates), and the backend must be healthy before nginx starts.
+name: shelfwise
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: shelfwise
+      POSTGRES_USER: shelfwise
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shelfwise-local}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shelfwise -d shelfwise"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        APP_VERSION: ${APP_VERSION:-compose}
+    image: shelfwise-backend:${APP_VERSION:-compose}
+    environment:
+      SHELFWISE_DATABASE_URL: postgresql+psycopg://shelfwise:${POSTGRES_PASSWORD:-shelfwise-local}@postgres:5432/shelfwise
+      # Fill an empty database with a month of demo activity on first start.
+      SHELFWISE_SEED_DEMO_DATA: ${SEED_DEMO_DATA:-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    # The app never writes to its own filesystem, so mount it read-only.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        APP_VERSION: ${APP_VERSION:-compose}
+    image: shelfwise-frontend:${APP_VERSION:-compose}
+    environment:
+      SHELFWISE_API_UPSTREAM: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+      # nginx renders its config from the template into conf.d at start-up.
+      - /etc/nginx/conf.d:uid=101,gid=101
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  pgdata:
