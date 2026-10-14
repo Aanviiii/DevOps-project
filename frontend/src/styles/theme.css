@@ -1,0 +1,110 @@
+/* Design tokens. A warm reading-room palette: paper, bottle green, brass and brick. */
+:root {
+  --paper: #faf6ee;
+  --paper-raised: #fffdf8;
+  --paper-sunk: #f2ebdd;
+  --ink: #2a2620;
+  --ink-soft: #6b6255;
+  --line: #e5dccb;
+
+  --green: #1f4d3a;
+  --green-strong: #163a2b;
+  --green-soft: #e3efe7;
+  --brass: #b98a2e;
+  --brass-soft: #f7ecd2;
+  --brick: #b4532f;
+  --brick-soft: #f8e3da;
+  --sky-soft: #e4ecf4;
+
+  --sidebar: #1c2b24;
+  --sidebar-ink: #e9e2d2;
+  --sidebar-muted: #9fb0a5;
+
+  --radius: 12px;
+  --radius-small: 8px;
+  --shadow: 0 1px 2px rgb(42 38 32 / 6%), 0 4px 16px rgb(42 38 32 / 6%);
+  --shadow-raised: 0 12px 40px rgb(28 43 36 / 22%);
+
+  --font-body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #171c19;
+    --paper-raised: #1f2622;
+    --paper-sunk: #131714;
+    --ink: #ece6d8;
+    --ink-soft: #a8a090;
+    --line: #313a35;
+
+    --green: #6fbf93;
+    --green-strong: #8fd4ac;
+    --green-soft: #213a2d;
+    --brass: #e0b45a;
+    --brass-soft: #3b3220;
+    --brick: #ec8a63;
+    --brick-soft: #43281f;
+    --sky-soft: #22303b;
+
+    --sidebar: #101512;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 16px rgb(0 0 0 / 25%);
+
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brass) 70%, transparent);
+  outline-offset: 2px;
+}
+
+.muted {
+  color: var(--ink-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
