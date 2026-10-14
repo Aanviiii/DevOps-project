@@ -1,0 +1,30 @@
+# A second, Helm-managed environment beside the GitOps one, on the same cluster:
+#
+#   kubectl create namespace shelfwise-staging
+#   kubectl label namespace shelfwise-staging pod-security.kubernetes.io/enforce=restricted
+#   helm upgrade --install shelfwise-staging helm/shelfwise -n shelfwise-staging \
+#     -f helm/shelfwise/values-staging.yaml --set image.tag=sha-xxxxxxx
+#   helm test shelfwise-staging -n shelfwise-staging
+#
+# Lean on purpose: one replica per tier, no autoscaling, no traffic generator and
+# no monitoring objects (the GitOps environment already shows those).
+
+backend:
+  seedDemoData: true
+  autoscaling:
+    enabled: false
+  replicas: 1
+  podDisruptionBudget: null # one replica: a minAvailable budget would block node drains
+
+frontend:
+  autoscaling:
+    enabled: false
+  replicas: 1
+  podDisruptionBudget: null
+
+postgres:
+  password: shelfwise-staging-only
+
+ingress:
+  className: nginx
+  host: staging.shelfwise.local

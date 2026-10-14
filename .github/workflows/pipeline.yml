@@ -97,9 +97,10 @@ jobs:
         run: |
           helm lint helm/shelfwise --strict -f helm/shelfwise/values-local.yaml
           helm lint helm/shelfwise --strict -f helm/shelfwise/values-eks.yaml --set image.tag=sha-ci
+          helm lint helm/shelfwise --strict -f helm/shelfwise/values-staging.yaml --set image.tag=sha-ci
       - name: Render and validate against the Kubernetes 1.35 API schemas
         run: |
-          for env in local eks; do
+          for env in local staging eks; do
             helm template shelfwise helm/shelfwise -n shelfwise               -f helm/shelfwise/values-$env.yaml --set image.tag=sha-ci               --api-versions monitoring.coreos.com/v1
           done | kubeconform -strict -summary -kubernetes-version 1.35.0             -schema-location default             -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
