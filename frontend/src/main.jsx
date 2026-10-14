@@ -4,6 +4,7 @@ import App from "./App";
 import "./styles/theme.css";
 import "./styles/layout.css";
 import "./styles/components.css";
+import "./styles/pages.css";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

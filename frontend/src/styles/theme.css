@@ -108,3 +108,28 @@ select {
     transition: none !important;
   }
 }
+
+/* Chart mark colours, validated for contrast and chroma against each surface. */
+:root {
+  --chart-bar: #2a8a5c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-bar: #45a874;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.88rem;
+}
