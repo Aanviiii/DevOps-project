@@ -39,16 +39,16 @@ kubectl -n monitoring get secret monitoring-grafana -o jsonpath="{.data.admin-pa
 
 ## 2. Commit → pipeline → deployment, live (4 min)
 
-Make a visible change. For example, in `frontend/src/components/Layout.jsx` change
+Make a visible change **in VS Code**. Don't use Windows PowerShell's `Get-Content`/`Set-Content` for this: version 5.1 re-encodes UTF-8 files and garbles characters such as `…` and `☰`. This actually happened once in this repository; see commit "Restore the ellipsis and menu icon…". For example, in `frontend/src/components/Layout.jsx` change
 
 ```jsx
-            <small>Library desk</small>
+            <small>Central library desk</small>
 ```
 
 to
 
 ```jsx
-            <small>Library desk · open till 8 pm</small>
+            <small>Central library desk · open till 8 pm</small>
 ```
 
 ```powershell
