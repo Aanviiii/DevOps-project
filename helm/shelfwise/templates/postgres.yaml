@@ -85,11 +85,16 @@ spec:
       volumes:
         - name: run
           emptyDir: {}
+  # Fields the API server would otherwise default are spelled out, so the live object
+  # matches Git exactly and Argo CD does not report drift.
   volumeClaimTemplates:
-    - metadata:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
         name: data
       spec:
         accessModes: [ReadWriteOnce]
+        volumeMode: Filesystem
         {{- with .Values.postgres.storage.storageClassName }}
         storageClassName: {{ . }}
         {{- end }}
