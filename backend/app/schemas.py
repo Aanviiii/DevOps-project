@@ -104,7 +104,8 @@ class LoanOut(ORMModel):
     returned_on: date | None
     renewals: int
     days_overdue: int
-    fine_due: int  # what this loan would cost if returned today (or what it cost)
+    fine_due: int  # accruing while out; fixed at return
+    fine_settled_on: date | None = None
 
 
 class HoldOut(ORMModel):
@@ -126,6 +127,12 @@ class MemberAccount(BaseModel):
     holds: list[HoldOut]
     outstanding_fines: int
     can_borrow: bool
+
+
+class FineSettlement(BaseModel):
+    member_id: int
+    settled: int  # rupees recorded as paid
+    outstanding_fines: int  # still owed (fines accruing on books not yet returned)
 
 
 class ErrorOut(BaseModel):

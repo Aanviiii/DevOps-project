@@ -36,13 +36,19 @@ def library_stats(db: Session, today: date) -> LibraryStats:
         .limit(5)
     ).all()
 
+    unpaid = db.scalar(
+        select(func.coalesce(func.sum(Loan.fine_charged), 0)).where(
+            Loan.returned_on.is_not(None), Loan.fine_settled_on.is_(None)
+        )
+    )
     return LibraryStats(
         titles=db.scalar(select(func.count()).select_from(Book)) or 0,
         copies=db.scalar(select(func.coalesce(func.sum(Book.copies_total), 0))) or 0,
         members_active=db.scalar(select(func.count()).where(Member.active.is_(True))) or 0,
         on_loan=len(active),
         overdue=sum(1 for due_on, _ in active if due_on < today),
-        outstanding_fines=sum(fine_for(due, today, policy_for(tier)) for due, tier in active),
+        outstanding_fines=unpaid
+        + sum(fine_for(due, today, policy_for(tier)) for due, tier in active),
         holds_waiting=holds.get(HoldStatus.WAITING, 0),
         holds_ready=holds.get(HoldStatus.READY, 0),
         checkouts_by_day=[

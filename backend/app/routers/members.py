@@ -10,7 +10,14 @@ from ..circulation import FINE_BLOCK_THRESHOLD, CirculationError, policy_for
 from ..core.clock import today as get_today
 from ..core.database import get_db
 from ..models import Hold, Loan, Member, MemberTier
-from ..schemas import MemberAccount, MemberCreate, MemberOut, MemberUpdate, PolicyOut
+from ..schemas import (
+    FineSettlement,
+    MemberAccount,
+    MemberCreate,
+    MemberOut,
+    MemberUpdate,
+    PolicyOut,
+)
 from ..services import circulation
 from .common import get_or_404
 
@@ -76,6 +83,18 @@ def member_account(member_id: int, db: Session = Depends(get_db), today: date = 
         can_borrow=member.active
         and fines < FINE_BLOCK_THRESHOLD
         and len(loans) < policy.max_active_loans,
+    )
+
+
+@router.post("/{member_id}/settle-fines", response_model=FineSettlement)
+def settle_fines(member_id: int, db: Session = Depends(get_db), today: date = Depends(get_today)):
+    """Record that the member paid every fine charged on books they have returned."""
+    member = get_or_404(db, Member, member_id)
+    settled = circulation.settle_fines(db, member=member, today=today)
+    return FineSettlement(
+        member_id=member.id,
+        settled=settled,
+        outstanding_fines=circulation.outstanding_fines(db, member, today),
     )
 
 

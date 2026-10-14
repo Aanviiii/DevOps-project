@@ -20,7 +20,7 @@ from ..circulation import (
     renewed_due_date,
     shelf_copies,
 )
-from ..metrics import CHECKOUTS, HOLDS_PLACED, RENEWALS, RETURNS
+from ..metrics import CHECKOUTS, FINES_SETTLED, HOLDS_PLACED, RENEWALS, RETURNS
 from ..models import Book, Hold, HoldStatus, Loan, Member
 from ..schemas import HoldOut, LoanOut
 from .catalogue import availability
@@ -57,10 +57,27 @@ def active_loans(db: Session, member_id: int) -> list[Loan]:
     )
 
 
+def unsettled_charges(db: Session, member_id: int) -> list[Loan]:
+    """Returned loans whose fine has not been paid yet."""
+    return list(
+        db.scalars(
+            select(Loan).where(
+                Loan.member_id == member_id,
+                Loan.returned_on.is_not(None),
+                Loan.fine_charged > 0,
+                Loan.fine_settled_on.is_(None),
+            )
+        )
+    )
+
+
 def outstanding_fines(db: Session, member: Member, today: date) -> int:
-    """Fines accruing on the member's overdue books right now."""
+    """What the member owes: fines charged on returned books and not yet paid, plus fines
+    still accruing on books that are overdue right now."""
     policy = policy_for(member.tier)
-    return sum(fine_for(loan.due_on, today, policy) for loan in active_loans(db, member.id))
+    accruing = sum(fine_for(loan.due_on, today, policy) for loan in active_loans(db, member.id))
+    charged = sum(loan.fine_charged for loan in unsettled_charges(db, member.id))
+    return accruing + charged
 
 
 def copies_free(db: Session, book: Book) -> int:
@@ -131,7 +148,7 @@ def checkout(db: Session, *, book_id: int, member_id: int, today: date) -> Loan:
         BorrowerState(
             active=member.active,
             active_loans=len(loans),
-            outstanding_fines=sum(fine_for(ln.due_on, today, policy) for ln in loans),
+            outstanding_fines=outstanding_fines(db, member, today),
             already_has_this_book=any(ln.book_id == book.id for ln in loans),
             has_ready_hold_for_this_book=my_hold is not None and my_hold.status is HoldStatus.READY,
         ),
@@ -159,6 +176,7 @@ def return_loan(db: Session, *, loan: Loan, today: date) -> Loan:
         raise CirculationError("ALREADY_RETURNED", f"Loan {loan.id} was returned already.")
     book = lock_book(db, loan.book_id)
     loan.returned_on = today
+    loan.fine_charged = fine_for(loan.due_on, today, policy_for(loan.member.tier))
     db.flush()
     refresh_queue(db, book, today)
     db.commit()
@@ -181,6 +199,18 @@ def renew(db: Session, *, loan: Loan, today: date) -> Loan:
     db.commit()
     RENEWALS.inc()
     return loan
+
+
+def settle_fines(db: Session, *, member: Member, today: date) -> int:
+    """Record payment of every fine charged on returned books. Returns the amount."""
+    charges = unsettled_charges(db, member.id)
+    for loan in charges:
+        loan.fine_settled_on = today
+    db.commit()
+    amount = sum(loan.fine_charged for loan in charges)
+    if amount:
+        FINES_SETTLED.inc(amount)
+    return amount
 
 
 def place_hold(db: Session, *, book_id: int, member_id: int, today: date) -> Hold:
@@ -221,6 +251,10 @@ def cancel_hold(db: Session, *, hold: Hold, today: date) -> Hold:
 
 def loan_out(loan: Loan, today: date) -> LoanOut:
     judged_on = loan.returned_on or today
+    if loan.returned_on is None:
+        fine = fine_for(loan.due_on, today, policy_for(loan.member.tier))
+    else:
+        fine = loan.fine_charged
     return LoanOut(
         id=loan.id,
         book_id=loan.book_id,
@@ -232,7 +266,8 @@ def loan_out(loan: Loan, today: date) -> LoanOut:
         returned_on=loan.returned_on,
         renewals=loan.renewals,
         days_overdue=days_overdue(loan.due_on, judged_on),
-        fine_due=fine_for(loan.due_on, judged_on, policy_for(loan.member.tier)),
+        fine_due=fine,
+        fine_settled_on=loan.fine_settled_on,
     )
 
 

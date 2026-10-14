@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
 )
@@ -82,6 +83,9 @@ class Loan(Base):
     __table_args__ = (
         CheckConstraint("due_on >= checked_out_on", name="due_after_checkout"),
         CheckConstraint("renewals >= 0", name="renewals_non_negative"),
+        CheckConstraint("fine_charged >= 0", name="fine_non_negative"),
+        # The overdue list and the metrics scan open loans by due date on every request.
+        Index("ix_loans_open_by_due", "returned_on", "due_on"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -91,6 +95,9 @@ class Loan(Base):
     due_on: Mapped[date] = mapped_column(Date)
     returned_on: Mapped[date | None] = mapped_column(Date)
     renewals: Mapped[int] = mapped_column(Integer, default=0)
+    # Fixed when the book comes back; owed until the desk records payment.
+    fine_charged: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    fine_settled_on: Mapped[date | None] = mapped_column(Date)
 
     book: Mapped[Book] = relationship(back_populates="loans")
     member: Mapped[Member] = relationship(back_populates="loans")
