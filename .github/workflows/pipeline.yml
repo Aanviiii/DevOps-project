@@ -39,8 +39,8 @@ jobs:
 
       - name: Lint and format check (ruff, including bandit security rules)
         run: |
-          ruff check . --output-format=github
-          ruff format --check .
+          ruff check . ../activity --output-format=github
+          ruff format --check . ../activity
 
       - name: Run tests (any failure stops the pipeline before images are built)
         run: pytest -v --cov=app --cov-report=term --cov-report=xml --cov-fail-under=90
@@ -144,7 +144,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        component: [backend, frontend]
+        component: [backend, frontend, activity]
     env:
       PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
