@@ -83,6 +83,16 @@ class PolicyOut(BaseModel):
 # ---------------------------------------------------------------- loans and holds
 
 
+class LoanCreate(BaseModel):
+    book_id: int = Field(gt=0)
+    member_id: int = Field(gt=0)
+
+
+class HoldCreate(BaseModel):
+    book_id: int = Field(gt=0)
+    member_id: int = Field(gt=0)
+
+
 class LoanOut(ORMModel):
     id: int
     book_id: int

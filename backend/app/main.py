@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from .circulation import CirculationError
 from .core.config import get_settings
-from .routers import books, members
+from .routers import books, holds, loans, members
 
 settings = get_settings()
 
@@ -24,8 +24,12 @@ app.add_middleware(
 @app.exception_handler(CirculationError)
 def circulation_error(_: Request, exc: CirculationError) -> JSONResponse:
     # 409 Conflict: the request is well formed but clashes with the library's current state.
-    return JSONResponse(status_code=409, content={"code": exc.code, "detail": exc.message})
+    # A missing book or member referenced in a request body is reported as 404.
+    status_code = 404 if exc.code.endswith("_NOT_FOUND") else 409
+    return JSONResponse(status_code=status_code, content={"code": exc.code, "detail": exc.message})
 
 
 app.include_router(books.router)
 app.include_router(members.router)
+app.include_router(loans.router)
+app.include_router(holds.router)

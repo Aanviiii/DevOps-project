@@ -1,3 +1,4 @@
+from datetime import date
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -5,10 +6,12 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ..circulation import CirculationError
+from ..circulation import FINE_BLOCK_THRESHOLD, CirculationError, policy_for
+from ..core.clock import today as get_today
 from ..core.database import get_db
-from ..models import Loan, Member, MemberTier
-from ..schemas import MemberCreate, MemberOut, MemberUpdate
+from ..models import Hold, Loan, Member, MemberTier
+from ..schemas import MemberAccount, MemberCreate, MemberOut, MemberUpdate, PolicyOut
+from ..services import circulation
 from .common import get_or_404
 
 router = APIRouter(prefix="/api/members", tags=["members"])
@@ -50,6 +53,30 @@ def list_members(
 @router.get("/{member_id}", response_model=MemberOut)
 def get_member(member_id: int, db: Session = Depends(get_db)):
     return get_or_404(db, Member, member_id)
+
+
+@router.get("/{member_id}/account", response_model=MemberAccount)
+def member_account(member_id: int, db: Session = Depends(get_db), today: date = Depends(get_today)):
+    """Everything the circulation desk needs about one member, in one call."""
+    member = get_or_404(db, Member, member_id)
+    policy = policy_for(member.tier)
+    loans = circulation.active_loans(db, member.id)
+    holds = db.scalars(
+        select(Hold)
+        .where(Hold.member_id == member.id, Hold.status.in_(circulation.OPEN_HOLD))
+        .order_by(Hold.placed_at)
+    )
+    fines = circulation.outstanding_fines(db, member, today)
+    return MemberAccount(
+        member=MemberOut.model_validate(member),
+        policy=PolicyOut(**policy.__dict__),
+        active_loans=[circulation.loan_out(loan, today) for loan in loans],
+        holds=[circulation.hold_out(db, hold) for hold in holds],
+        outstanding_fines=fines,
+        can_borrow=member.active
+        and fines < FINE_BLOCK_THRESHOLD
+        and len(loans) < policy.max_active_loans,
+    )
 
 
 @router.post("", response_model=MemberOut, status_code=status.HTTP_201_CREATED)
