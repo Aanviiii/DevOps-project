@@ -183,7 +183,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Members waiting (holds)",
+      "title": "Holds waiting",
       "description": "Holds waiting for a copy.",
       "gridPos": {
         "h": 4,
@@ -339,7 +339,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Error rate (5xx share of requests)",
-      "description": "Server errors as a share of all requests. Lending-rule refusals are 409s, not errors.",
+      "description": "Server errors as a share of all requests (0% when there are none). Lending-rule refusals are 409s, not errors.",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -349,7 +349,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(http_requests_total{namespace=\"shelfwise\",job=\"shelfwise-backend\",status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_requests_total{namespace=\"shelfwise\",job=\"shelfwise-backend\"}[5m])), 1e-9)",
+          "expr": "(sum(rate(http_requests_total{namespace=\"shelfwise\",job=\"shelfwise-backend\",status=~\"5..\"}[5m])) or vector(0)) / sum(rate(http_requests_total{namespace=\"shelfwise\",job=\"shelfwise-backend\"}[5m]))",
           "legendFormat": "5xx ratio"
         }
       ],
@@ -373,7 +373,9 @@
             "stacking": {
               "mode": "none"
             }
-          }
+          },
+          "min": 0,
+          "max": 1
         },
         "overrides": []
       },
