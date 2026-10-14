@@ -1,0 +1,55 @@
+# Rendered at container start by the image's envsubst step, which replaces
+# ${SHELFWISE_API_UPSTREAM} (e.g. http://backend:8000 in Compose, the backend Service
+# in Kubernetes). Only variables listed in NGINX_ENVSUBST_FILTER are substituted, so
+# nginx's own $variables below are left alone.
+
+server_tokens off;
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self'" always;
+
+    # Liveness/readiness for this container alone; it does not depend on the backend.
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # The browser calls /api/... on its own origin; nginx forwards it to the backend.
+    location /api/ {
+        proxy_pass ${SHELFWISE_API_UPSTREAM};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 30s;
+    }
+
+    # Fingerprinted build assets never change, so let browsers cache them for a year.
+    # Caching is set with `expires`, not add_header: any add_header inside a location
+    # would stop the security headers above from being inherited.
+    location /assets/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+
+    # Single-page app: unknown paths fall back to index.html, which is never cached so a
+    # new deploy is picked up on the next page load.
+    location / {
+        expires -1;
+        try_files $uri $uri/ /index.html;
+    }
+}
