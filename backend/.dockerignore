@@ -1,0 +1,15 @@
+# Only the app, migrations, requirements and entrypoint belong in the build context.
+.venv
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+htmlcov
+tests
+.env
+.env.*
+*.db
+Dockerfile
+.dockerignore

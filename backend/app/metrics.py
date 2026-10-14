@@ -34,6 +34,16 @@ BUILD = Info("shelfwise_build", "Version of the running backend")
 
 
 class LibraryStateCollector(Collector):
+    def describe(self):
+        # Declaring the names up front stops the registry from calling collect() (and
+        # so querying the database) at import time just to learn them.
+        return [
+            GaugeMetricFamily("shelfwise_overdue_loans", ""),
+            GaugeMetricFamily("shelfwise_books_on_loan", ""),
+            GaugeMetricFamily("shelfwise_outstanding_fines_rupees", ""),
+            GaugeMetricFamily("shelfwise_hold_queue_depth", "", labels=["status"]),
+        ]
+
     def collect(self):
         overdue = GaugeMetricFamily("shelfwise_overdue_loans", "Loans past their due date")
         on_loan = GaugeMetricFamily("shelfwise_books_on_loan", "Copies currently lent out")
