@@ -55,9 +55,7 @@ class LibraryStateCollector(Collector):
                         select(Hold.status, func.count())
                         .where(Hold.status.in_([HoldStatus.WAITING, HoldStatus.READY]))
                         .group_by(Hold.status)
-                    )
-                    .tuples()
-                    .all()
+                    ).all()
                 )
         except Exception as exc:  # a scrape must never crash because the database blinked
             log.warning("library state metrics unavailable: %s", type(exc).__name__)

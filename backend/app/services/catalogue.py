@@ -29,7 +29,7 @@ def availability(db: Session, book_ids: Iterable[int] | None = None) -> dict[int
         loans = loans.where(Loan.book_id.in_(ids))
         holds = holds.where(Hold.book_id.in_(ids))
 
-    on_loan = dict(db.execute(loans.group_by(Loan.book_id)).tuples().all())
+    on_loan = dict(db.execute(loans.group_by(Loan.book_id)).all())
     counts: dict[int, dict[HoldStatus, int]] = {}
     for book_id, status, count in db.execute(holds.group_by(Hold.book_id, Hold.status)):
         counts.setdefault(book_id, {})[status] = count

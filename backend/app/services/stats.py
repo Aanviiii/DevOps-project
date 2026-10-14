@@ -18,7 +18,7 @@ def library_stats(db: Session, today: date) -> LibraryStats:
         .join(Member, Loan.member_id == Member.id)
         .where(Loan.returned_on.is_(None))
     ).all()
-    holds = dict(db.execute(select(Hold.status, func.count()).group_by(Hold.status)).tuples().all())
+    holds = dict(db.execute(select(Hold.status, func.count()).group_by(Hold.status)).all())
 
     since = today - timedelta(days=TREND_DAYS - 1)
     per_day = dict(
@@ -26,9 +26,7 @@ def library_stats(db: Session, today: date) -> LibraryStats:
             select(Loan.checked_out_on, func.count())
             .where(Loan.checked_out_on >= since)
             .group_by(Loan.checked_out_on)
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     genres = db.execute(
         select(Book.genre, func.count(Loan.id))

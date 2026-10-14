@@ -1,6 +1,6 @@
 """Circulation desk operations: the database side of the pure rules in app.circulation."""
 
-from datetime import date
+from datetime import UTC, date, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -70,8 +70,13 @@ def copies_free(db: Session, book: Book) -> int:
     return available_copies(book.copies_total, stats.on_loan, stats.ready_holds)
 
 
+def as_utc(moment: datetime) -> datetime:
+    # SQLite hands timestamps back without a timezone; they were stored as UTC.
+    return moment if moment.tzinfo else moment.replace(tzinfo=UTC)
+
+
 def queue_entries(holds: list[Hold]) -> list[QueueEntry]:
-    return [QueueEntry(h.id, h.placed_at, h.status, h.ready_until) for h in holds]
+    return [QueueEntry(h.id, as_utc(h.placed_at), h.status, h.ready_until) for h in holds]
 
 
 def open_holds_for_book(db: Session, book_id: int) -> list[Hold]:
