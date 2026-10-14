@@ -114,3 +114,35 @@ def test_holds_can_be_filtered_by_member(client, make_book, make_member, lend):
     place(client, book, other)
     mine = client.get("/api/holds", params={"member_id": me["id"]}).json()
     assert [h["member_id"] for h in mine] == [me["id"]]
+
+
+# ---------------------------------------------------------------- renewals vs. the queue
+
+
+def test_renewal_is_refused_while_others_wait(client, make_book, make_member, lend):
+    book, loan = lent_out_book(make_book, make_member, lend)
+    place(client, book, make_member())
+
+    response = client.post(f"/api/loans/{loan['id']}/renew")
+    assert response.status_code == 409
+    assert response.json()["code"] == "HELD_FOR_OTHERS"
+
+
+def test_renewal_is_allowed_again_once_the_queue_empties(client, make_book, make_member, lend):
+    book, loan = lent_out_book(make_book, make_member, lend)
+    hold = place(client, book, make_member()).json()
+    client.post(f"/api/holds/{hold['id']}/cancel")
+
+    assert client.post(f"/api/loans/{loan['id']}/renew").status_code == 200
+
+
+def test_spare_copies_do_not_block_renewal(client, make_book, make_member, lend):
+    # Two copies, both out, one member waiting: the next copy returned serves them,
+    # so the borrower holding the *other* copy is still blocked; but once a copy is
+    # back on the shelf for the waiter, renewing is fine.
+    book = make_book(copies_total=2)
+    first, second = lend(book, make_member()), lend(book, make_member())
+    place(client, book, make_member())
+    client.post(f"/api/loans/{first['id']}/return")  # the waiter's copy is now READY
+
+    assert client.post(f"/api/loans/{second['id']}/renew").status_code == 200

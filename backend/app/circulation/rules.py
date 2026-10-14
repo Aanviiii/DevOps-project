@@ -107,12 +107,18 @@ def renewed_due_date(
     policy: LoanPolicy,
     today: date,
     outstanding_fines: int,
+    others_waiting: bool = False,
 ) -> date:
     """Return the new due date for a renewal, or raise CirculationError.
 
     A renewal restarts the loan period from today (or from the current due date if the
-    member renews early), so renewing early never shortens a loan.
+    member renews early), so renewing early never shortens a loan. A book other members
+    are queueing for cannot be renewed: it has to come back so the queue can move.
     """
+    if others_waiting:
+        raise CirculationError(
+            "HELD_FOR_OTHERS", "Other members are waiting for this book, so it cannot be renewed."
+        )
     if renewals >= policy.max_renewals:
         raise CirculationError(
             "RENEWAL_LIMIT", f"This loan has used all {policy.max_renewals} renewals."

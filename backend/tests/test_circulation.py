@@ -237,3 +237,16 @@ def test_queue_position_counts_only_waiting_holds():
     holds = [ready(1, until=OCT_1), waiting(2, day=1), waiting(3, day=2)]
     assert queue_position(holds, 3) == 2
     assert queue_position(holds, 1) is None
+
+
+def test_renewal_is_refused_when_other_members_are_waiting():
+    with pytest.raises(CirculationError) as refused:
+        renewed_due_date(
+            due_on=OCT_1,
+            renewals=0,
+            policy=STUDENT,
+            today=OCT_1,
+            outstanding_fines=0,
+            others_waiting=True,
+        )
+    assert refused.value.code == "HELD_FOR_OTHERS"
