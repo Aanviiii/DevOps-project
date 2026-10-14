@@ -80,3 +80,107 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
+
+  # ------------------------------------------------------------------ build, scan, publish
+  images:
+    name: Image · ${{ matrix.component }}
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write # push to GitHub Container Registry
+      security-events: write # upload Trivy findings to the Security tab
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    env:
+      PUBLISH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Work out the image name (GHCR needs a lowercase owner)
+        id: name
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/shelfwise-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Tag with the commit SHA, never "latest"
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.name.outputs.image }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=sha,prefix=,format=long
+
+      - name: Build the image for scanning
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.component }}
+          load: true
+          tags: scan/shelfwise-${{ matrix.component }}:${{ github.sha }}
+          build-args: APP_VERSION=sha-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+      - name: Trivy gate (fail on any HIGH or CRITICAL vulnerability)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: scan/shelfwise-${{ matrix.component }}:${{ github.sha }}
+          scanners: vuln,secret
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          format: table
+          exit-code: "1"
+
+      - name: Trivy report for GitHub code scanning (all severities from MEDIUM up)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: scan/shelfwise-${{ matrix.component }}:${{ github.sha }}
+          severity: MEDIUM,HIGH,CRITICAL
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Upload findings to the Security tab
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.component)) != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: trivy-${{ matrix.component }}
+
+      # Only reached when the gate passed: what gets pushed is exactly what was scanned,
+      # rebuilt from the same layer cache.
+      - name: Log in to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to GHCR
+        if: env.PUBLISH == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.component }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: APP_VERSION=sha-${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          provenance: mode=max
+          sbom: true
+
+      - name: Summary
+        if: env.PUBLISH == 'true'
+        run: |
+          {
+            echo "### ${{ matrix.component }} image published"
+            echo '```'
+            echo "${{ steps.meta.outputs.tags }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
