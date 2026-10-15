@@ -68,17 +68,29 @@ Extra gates in the same pipeline: ruff lint and format (with bandit rules), a 90
 
 ## M7 · Terraform on AWS (15)
 
+> **Status at submission:** the Terraform code is complete, validated in CI, and `terraform plan` runs against the real AWS account. Creating the resources was **blocked by AWS**, not by the code. The account is a brand-new AWS **Free plan** account ($100 of credits, status ACTIVE), and AWS's service control policy on it explicitly denies EC2 and EKS calls in every region, even read-only ones ([m7-account-blocked.png](evidence/m7-account-blocked.png)). The apply, console and destroy screenshots will be added when the account allows it (see *Finishing M7* below).
+
 | Criterion | Where | Evidence |
 |---|---|---|
 | Valid HCL in `terraform/` | [`terraform/`](../terraform/): plain resources, no modules | CI job "Terraform · fmt and validate" in [m5-pipeline-green.png](evidence/m5-pipeline-green.png) |
 | `terraform init` succeeds | n/a | [m7-terraform-plan.png](evidence/m7-terraform-plan.png) |
-| `terraform plan` non-empty, no errors | n/a | [m7-terraform-plan.png](evidence/m7-terraform-plan.png) |
-| VPC with ≥2 public subnets | [`network.tf`](../terraform/network.tf) | [m7-terraform-apply.png](evidence/m7-terraform-apply.png), [m7-aws-console-vpc.png](evidence/m7-aws-console-vpc.png) |
-| EKS with a worker node group | [`cluster.tf`](../terraform/cluster.tf), [`nodes.tf`](../terraform/nodes.tf) | [m7-aws-console-eks.png](evidence/m7-aws-console-eks.png), [m7-eks-kubectl.png](evidence/m7-eks-kubectl.png) |
-| `terraform destroy` clean | [`scripts/eks-down.ps1`](../scripts/eks-down.ps1) | [m7-terraform-destroy.png](evidence/m7-terraform-destroy.png) |
+| `terraform plan` non-empty, no errors | run as `capstone-admin` in account 419701112200 | [m7-terraform-plan.png](evidence/m7-terraform-plan.png): **24 to add**, including VPC, 2 public subnets, EKS cluster and node group |
+| VPC with ≥2 public subnets | [`network.tf`](../terraform/network.tf) | pending: account blocked ([m7-account-blocked.png](evidence/m7-account-blocked.png)) |
+| EKS with a worker node group | [`cluster.tf`](../terraform/cluster.tf), [`nodes.tf`](../terraform/nodes.tf) | pending: account blocked |
+| `terraform destroy` clean | [`scripts/eks-down.ps1`](../scripts/eks-down.ps1) | pending: account blocked |
 | `terraform.tfvars.example`, no credentials | [`terraform.tfvars.example`](../terraform/terraform.tfvars.example); gitleaks in CI | n/a |
 
+The plan pins the two availability zones (`availability_zones` in `terraform.tfvars`), because listing zones is one of the EC2 calls the account cannot make yet. Leaving that setting empty makes Terraform look the zones up from AWS instead. Apply behaves the same either way, so nothing has to change in the code once the account is unblocked.
+
 Cost-conscious design (no NAT gateway, Spot nodes, standard-support pin, budget alert) is explained in [terraform/README.md](../terraform/README.md).
+
+### Finishing M7 once the account allows EC2/EKS
+
+1. Check access: `aws ec2 describe-availability-zones --region ap-south-1` must list zones instead of an `UnauthorizedOperation` error.
+2. `./scripts/eks-up.ps1`: terraform apply (asks first), ingress controller, the app, `helm test`. Capture the apply summary as `m7-terraform-apply.png` and `kubectl get nodes,pods -n shelfwise` as `m7-eks-kubectl.png`.
+3. AWS Console screenshots: `m7-aws-console-vpc.png` (VPC `shelfwise-vpc` and its subnets) and `m7-aws-console-eks.png` (cluster `shelfwise` and its node group).
+4. `./scripts/eks-down.ps1`: removes the load balancer and volume, then `terraform destroy`. Capture as `m7-terraform-destroy.png`.
+5. Replace the three "pending" cells above with those screenshots.
 
 ## M8 · Kubernetes + Helm (15)
 
