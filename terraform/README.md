@@ -28,6 +28,18 @@ Design choices that keep it cheap:
 - **No control-plane logging** to CloudWatch.
 - **`upgrade_policy = STANDARD`**, so the cluster never slips into extended support at 6× the price.
 
+## AWS Free plan accounts
+
+This project was applied on a Free plan account, which adds three limits:
+
+| Limit | Setting in `terraform.tfvars` |
+|---|---|
+| One region only (this account: Sydney) | `region = "ap-southeast-2"` |
+| No Spot instances | `node_capacity_type = "ON_DEMAND"` |
+| Only Free Tier instance types (`t3.micro/small`, `m7i-flex.large`, `c7i-flex.large`, …) | `node_instance_types = ["m7i-flex.large"]` |
+
+To list the eligible types in a region: `aws ec2 describe-instance-types --filters Name=free-tier-eligible,Values=true --query "InstanceTypes[].InstanceType"`. Pass the same region to the scripts: `./scripts/eks-up.ps1 -Region ap-southeast-2` and `./scripts/eks-down.ps1 -Region ap-southeast-2`.
+
 ## Accounts that cannot call EC2 yet
 
 A brand-new AWS account (including Free plan accounts still being set up) can have EC2 and EKS denied by an AWS service control policy. In that state `terraform plan` fails on the availability-zone lookup. Set `availability_zones = ["ap-south-1a", "ap-south-1b"]` in `terraform.tfvars` to pin the zones; `plan` then works, and the zone lookup is skipped entirely. Remove the line (or leave it) once the account is active: `apply` works either way. `apply` itself still needs EC2/EKS access.

@@ -14,6 +14,10 @@ api_allowed_cidrs = ["203.0.113.10/32"]
 
 node_capacity_type  = "SPOT"
 node_instance_types = ["t3.medium", "t3a.medium"]
+# AWS Free plan accounts: one allowed region, no Spot, Free Tier types only, e.g.
+#   region              = "ap-southeast-2"
+#   node_capacity_type  = "ON_DEMAND"
+#   node_instance_types = ["m7i-flex.large"]
 node_desired_size   = 2
 
 # Email alert when monthly spend passes 50% and 100% of this amount
