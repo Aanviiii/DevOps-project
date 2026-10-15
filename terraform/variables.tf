@@ -49,6 +49,21 @@ variable "az_count" {
   }
 }
 
+variable "availability_zones" {
+  description = <<-EOT
+    Zones to place the subnets in, e.g. ["ap-south-1a", "ap-south-1b"]. Leave empty to ask
+    AWS which zones are available (needs ec2:DescribeAvailabilityZones). Pinning them lets
+    `terraform plan` run in an account that cannot call EC2 yet; apply works either way.
+  EOT
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = length(var.availability_zones) == 0 || length(var.availability_zones) >= var.az_count
+    error_message = "List at least az_count zones, or leave availability_zones empty."
+  }
+}
+
 variable "api_allowed_cidrs" {
   description = "Networks allowed to reach the Kubernetes API endpoint. Narrow this to your own IP (x.x.x.x/32) where possible."
   type        = list(string)

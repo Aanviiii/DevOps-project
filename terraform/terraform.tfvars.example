@@ -5,6 +5,10 @@ region       = "ap-south-1"
 cluster_name = "shelfwise"
 owner        = "aanvi"
 
+# Optional: pin the zones instead of looking them up. Needed only when the account
+# cannot call ec2:DescribeAvailabilityZones yet (e.g. a new account still activating).
+# availability_zones = ["ap-south-1a", "ap-south-1b"]
+
 # Lock the Kubernetes API to your own public IP for the demo (find it at checkip.amazonaws.com)
 api_allowed_cidrs = ["203.0.113.10/32"]
 

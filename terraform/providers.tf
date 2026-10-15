@@ -14,7 +14,10 @@ provider "aws" {
   }
 }
 
+# Looked up only when availability_zones is left empty (see variables.tf).
 data "aws_availability_zones" "available" {
+  count = length(var.availability_zones) == 0 ? 1 : 0
+
   state = "available"
   # Skip Local Zones and Wavelength zones, which EKS does not support.
   filter {
@@ -22,5 +25,3 @@ data "aws_availability_zones" "available" {
     values = ["opt-in-not-required"]
   }
 }
-
-data "aws_caller_identity" "current" {}

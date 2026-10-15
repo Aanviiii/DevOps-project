@@ -7,7 +7,12 @@
 # from the cluster itself, so nothing on the nodes is reachable from the internet.
 
 locals {
-  azs = slice(data.aws_availability_zones.available.names, 0, var.az_count)
+  # Pinned zones when given, otherwise whatever AWS reports as available in the region.
+  azs = slice(
+    length(var.availability_zones) > 0 ? var.availability_zones : data.aws_availability_zones.available[0].names,
+    0,
+    var.az_count,
+  )
 }
 
 resource "aws_vpc" "main" {
