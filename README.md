@@ -78,7 +78,7 @@ The full picture, including the AWS network and the reasoning behind each choice
 | CI/CD | GitHub Actions: lint, test, build, Helm and Terraform validation, gitleaks, Trivy, GHCR push |
 | Delivery | Argo CD + Image Updater (GitOps, no bot commits) |
 | Kubernetes | Helm chart: Deployments, StatefulSet, Services, Ingress, HPA, PDB, NetworkPolicy, `helm test` |
-| Infrastructure | Terraform (plain AWS resources): VPC, subnets, IAM, EKS 1.35, Spot node group, add-ons, budget alert |
+| Infrastructure | Terraform (plain AWS resources): VPC, subnets, IAM, EKS 1.35, managed node group, add-ons, budget alert; applied on AWS in Sydney, then destroyed |
 | Observability | Prometheus metrics (HTTP plus library-specific), alert rules, Grafana dashboard |
 
 ## Repository layout
