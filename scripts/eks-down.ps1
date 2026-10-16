@@ -19,7 +19,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Region = "ap-south-1",
+    [string]$Region = "ap-southeast-2",
     [string]$ClusterName = "shelfwise",
     [switch]$AutoApprove
 )

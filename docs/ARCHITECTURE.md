@@ -84,16 +84,16 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-    subgraph aws [AWS ap-south-1]
+    subgraph aws [AWS ap-southeast-2 · Sydney]
         subgraph vpc [VPC 10.42.0.0/16]
             igw[Internet gateway]
-            subgraph az1 [ap-south-1a]
+            subgraph az1 [ap-southeast-2a]
                 s1[public subnet 10.42.0.0/20]
-                n1[node t3.medium Spot]
+                n1[node m7i-flex.large]
             end
-            subgraph az2 [ap-south-1b]
+            subgraph az2 [ap-southeast-2b]
                 s2[public subnet 10.42.16.0/20]
-                n2[node t3.medium Spot]
+                n2[node m7i-flex.large]
             end
             nlb[Network Load Balancer<br/>created by ingress-nginx]
         end
@@ -108,8 +108,8 @@ flowchart TB
 
 | Decision | Why | Production alternative |
 |---|---|---|
-| Public subnets only, **no NAT gateway** | A NAT gateway is ≈ $1.10/day before traffic, more than the nodes for a short demo. Nodes keep public IPs, but the EKS-managed security group only admits cluster traffic. | Private subnets for nodes plus a NAT gateway (or VPC endpoints) |
-| **Spot** nodes, two instance types | ~70% cheaper; two types make capacity easier to find; the managed node group replaces reclaimed nodes | On-Demand or mixed capacity for the critical baseline |
+| Public subnets only, **no NAT gateway** | A NAT gateway adds ≈ $0.06/hour ($1.40/day) in Sydney before any traffic, about 15% on top of the whole cluster. Nodes keep public IPs, but the EKS-managed security group only admits cluster traffic. | Private subnets for nodes plus a NAT gateway (or VPC endpoints) |
+| On-Demand **`m7i-flex.large`** nodes in **Sydney** | The AWS Free plan allows one region (Sydney for this account), no Spot and only Free Tier instance types; all three are Terraform variables | Spot (about 70% cheaper) on a paid account, or mixed capacity with an On-Demand baseline |
 | **Pod Identity** for the EBS CSI driver | Scoped to one service account, with no IAM OIDC provider needed (some accounts' policies forbid creating one) | Same |
 | `upgrade_policy = STANDARD` | Prevents silently paying 6× for extended support if the cluster outlives its version | Same, with a planned upgrade cadence |
 | Local Terraform state | One person, one short-lived cluster; state is git-ignored | S3 backend with DynamoDB/S3 locking |

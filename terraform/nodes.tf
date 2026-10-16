@@ -1,9 +1,10 @@
-# Worker nodes: an EKS managed node group on Spot capacity.
+# Worker nodes: an EKS managed node group.
 #
-# Two t3.medium-class nodes give 4 vCPU / 8 GiB, enough for the app, Postgres, the
-# ingress controller and the monitoring stack. Spot costs roughly a third of On-Demand;
-# if AWS reclaims a node, the managed group replaces it and Kubernetes reschedules
-# the pods. Listing two similar instance types makes Spot capacity easier to find.
+# Two m7i-flex.large nodes (2 vCPU / 8 GiB each) run the app, Postgres, the ingress
+# controller and the monitoring stack. They are On-Demand and Free Tier eligible, which
+# is what an AWS Free plan account allows. On a paid account, node_capacity_type = "SPOT"
+# costs roughly a third as much: if AWS reclaims a node, the managed group replaces it
+# and Kubernetes reschedules the pods.
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-workers"

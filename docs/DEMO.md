@@ -72,7 +72,7 @@ Refresh the app: the new text shows, and the sidebar footer reads `Frontend sha-
 
 ## 3. Infrastructure as code (1.5 min)
 
-- Walk through `terraform/`: `network.tf` (VPC, two public subnets, no NAT and why), `cluster.tf`, `nodes.tf` (Spot), `budget.tf`.
+- Walk through `terraform/`: `network.tf` (VPC, two public subnets, no NAT and why), `cluster.tf`, `nodes.tf` (On-Demand `m7i-flex.large`, the Free plan limits), `budget.tf`.
 - Show the screenshots of `terraform plan`, the AWS console (VPC + EKS) and `terraform destroy` in [SUBMISSION.md](SUBMISSION.md#m7--terraform-aws-infrastructure-as-code). The cluster is only up during a dedicated session, to keep costs near zero.
 
 ## 4. Kubernetes, Helm, Ingress (1.5 min)

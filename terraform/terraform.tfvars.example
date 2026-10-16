@@ -1,23 +1,23 @@
 # Copy to terraform.tfvars (git-ignored) and adjust. No credentials belong here:
 # Terraform reads them from `aws configure` or AWS_* environment variables.
 
-region       = "ap-south-1"
+region       = "ap-southeast-2"
 cluster_name = "shelfwise"
 owner        = "aanvi"
 
 # Optional: pin the zones instead of looking them up. Needed only when the account
 # cannot call ec2:DescribeAvailabilityZones yet (e.g. a new account still activating).
-# availability_zones = ["ap-south-1a", "ap-south-1b"]
+# availability_zones = ["ap-southeast-2a", "ap-southeast-2b"]
 
 # Lock the Kubernetes API to your own public IP for the demo (find it at checkip.amazonaws.com)
 api_allowed_cidrs = ["203.0.113.10/32"]
 
-node_capacity_type  = "SPOT"
-node_instance_types = ["t3.medium", "t3a.medium"]
-# AWS Free plan accounts: one allowed region, no Spot, Free Tier types only, e.g.
-#   region              = "ap-southeast-2"
-#   node_capacity_type  = "ON_DEMAND"
-#   node_instance_types = ["m7i-flex.large"]
+# AWS Free plan accounts allow one region, no Spot and Free Tier types only.
+# On a paid account, Spot is about 70% cheaper:
+#   node_capacity_type  = "SPOT"
+#   node_instance_types = ["t3.medium", "t3a.medium"]
+node_capacity_type  = "ON_DEMAND"
+node_instance_types = ["m7i-flex.large"]
 node_desired_size   = 2
 
 # Email alert when monthly spend passes 50% and 100% of this amount

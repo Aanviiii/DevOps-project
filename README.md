@@ -61,7 +61,7 @@ flowchart LR
 
     prom[Prometheus] -->|/metrics| be
     graf[Grafana] --> prom
-    tf[Terraform] -.->|VPC + EKS| aws[(AWS ap-south-1)]
+    tf[Terraform] -.->|VPC + EKS| aws[(AWS ap-southeast-2<br/>Sydney)]
 ```
 
 The full picture, including the AWS network and the reasoning behind each choice, is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -148,7 +148,7 @@ From then on **every commit that passes CI is deployed automatically**. Add `127
 ./scripts/eks-down.ps1    # removes the LB and volume, terraform destroy, checks nothing is left
 ```
 
-It costs about $0.16/hour. See [terraform/README.md](terraform/README.md) for the cost breakdown and design.
+It costs about $0.40/hour (the whole demo session used about $0.50 of AWS credits). See [terraform/README.md](terraform/README.md) for the cost breakdown and design.
 
 ---
 

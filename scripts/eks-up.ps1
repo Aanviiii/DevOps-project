@@ -10,7 +10,7 @@
   5. helm upgrade --install with values-eks.yaml and the image built for -ImageTag.
   6. Prints the public URL.
 
-  EKS costs about $0.16 an hour in total. Run ./scripts/eks-down.ps1 as soon as
+  EKS costs about $0.40 an hour in total. Run ./scripts/eks-down.ps1 as soon as
   you have finished.
 
 .EXAMPLE
@@ -19,7 +19,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string]$Region = "ap-south-1",
+    [string]$Region = "ap-southeast-2",
     [string]$ClusterName = "shelfwise",
     [string]$ImageTag = "",
     [switch]$AutoApprove
@@ -57,7 +57,7 @@ try {
         terraform plan -input=false -out tfplan -var "region=$Region" -var "cluster_name=$ClusterName"
     }
     if (-not $AutoApprove) {
-        $answer = Read-Host "Apply this plan and start paying for EKS (~`$0.16/hour)? Type yes"
+        $answer = Read-Host "Apply this plan and start paying for EKS (~`$0.40/hour)? Type yes"
         if ($answer -ne "yes") { throw "Cancelled before apply. Nothing was created." }
     }
     Invoke-Checked "terraform apply" { terraform apply -input=false tfplan }

@@ -1,7 +1,7 @@
 variable "region" {
   description = "AWS region for every resource."
   type        = string
-  default     = "ap-south-1"
+  default     = "ap-southeast-2"
 }
 
 variable "owner" {
@@ -51,7 +51,7 @@ variable "az_count" {
 
 variable "availability_zones" {
   description = <<-EOT
-    Zones to place the subnets in, e.g. ["ap-south-1a", "ap-south-1b"]. Leave empty to ask
+    Zones to place the subnets in, e.g. ["ap-southeast-2a", "ap-southeast-2b"]. Leave empty to ask
     AWS which zones are available (needs ec2:DescribeAvailabilityZones). Pinning them lets
     `terraform plan` run in an account that cannot call EC2 yet; apply works either way.
   EOT
@@ -71,15 +71,15 @@ variable "api_allowed_cidrs" {
 }
 
 variable "node_instance_types" {
-  description = "Instance types for the worker nodes. Several similar types make Spot capacity easier to find."
+  description = "Instance types for the worker nodes. m7i-flex.large is Free Tier eligible; with SPOT, list several similar types so capacity is easier to find."
   type        = list(string)
-  default     = ["t3.medium", "t3a.medium"]
+  default     = ["m7i-flex.large"]
 }
 
 variable "node_capacity_type" {
-  description = "SPOT (about 70% cheaper, may be reclaimed) or ON_DEMAND."
+  description = "ON_DEMAND, or SPOT (about 70% cheaper, may be reclaimed; not allowed on AWS Free plan accounts)."
   type        = string
-  default     = "SPOT"
+  default     = "ON_DEMAND"
 
   validation {
     condition     = contains(["SPOT", "ON_DEMAND"], var.node_capacity_type)
