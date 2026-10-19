@@ -4,7 +4,7 @@
 # unprivileged nginx. Node, npm and node_modules never reach the runtime image.
 
 # ---------------------------------------------------------------- build
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /src
 COPY package.json package-lock.json ./
